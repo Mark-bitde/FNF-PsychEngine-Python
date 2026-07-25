@@ -1,40 +1,37 @@
 package psychpython;
 
+import Type;
+
 class PythonClassAccess
 {
 	public static function setup(script:PythonScript)
 	{
-		script.set("getPropertyFromClass",
-		function(className:String, field:String)
+		script.set("getPropertyFromClass", function(className:String, field:String)
 		{
 			return get(className, field);
 		});
 
-
-		script.set("setPropertyFromClass",
-		function(className:String, field:String, value:Dynamic)
+		script.set("setPropertyFromClass", function(className:String, field:String, value:Dynamic)
 		{
 			set(className, field, value);
 		});
 	}
 
-
 	static function get(className:String, field:String):Dynamic
 	{
 		var cls = Type.resolveClass(className);
+		if(cls == null) return null;
 
-		if(cls == null)
-			return null;
-
-		return Reflect.getProperty(cls, field);
+		// Для статических полей класса используем Reflect.field вместо getProperty
+		return Reflect.field(cls, field);
 	}
-
 
 	static function set(className:String, field:String, value:Dynamic)
 	{
 		var cls = Type.resolveClass(className);
-
-		if(cls != null)
-			Reflect.setProperty(cls, field, value);
+		if(cls != null) {
+			// Для статических полей класса используем Reflect.setField вместо setProperty
+			Reflect.setField(cls, field, value);
+		}
 	}
 }
