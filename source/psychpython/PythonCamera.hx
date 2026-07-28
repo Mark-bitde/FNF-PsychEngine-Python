@@ -1,6 +1,7 @@
+#if PYTHON_ALLOWED
 package psychpython;
 
-import flixel.FlxG;
+import flixel.FlxCamera;
 import flixel.util.FlxColor;
 import states.PlayState;
 
@@ -8,184 +9,117 @@ class PythonCamera
 {
 	public static function setup(script:PythonScript)
 	{
-		script.set("setCameraZoom", function(camera:String, zoom:Float)
-		{
-			setCameraZoom(camera, zoom);
-		});
+		script.set("setCameraZoom", setCameraZoom);
+		script.set("setCamZoom", setCameraZoom);
 
+		script.set("cameraShake", cameraShake);
+		script.set("cameraFlash", cameraFlash);
+		script.set("cameraFade", cameraFade);
 
-		script.set("setCamZoom", function(camera:String, zoom:Float)
-		{
-			setCameraZoom(camera, zoom);
-		});
+		script.set("setCameraScroll", setCameraScroll);
+		script.set("moveCamera", moveCamera);
 
-
-		script.set("cameraShake", function(camera:String, intensity:Float, duration:Float)
-		{
-			cameraShake(camera, intensity, duration);
-		});
-
-
-		script.set("cameraFlash", function(camera:String, color:String, duration:Float)
-		{
-			cameraFlash(camera, color, duration);
-		});
-
-
-		script.set("cameraFade", function(camera:String, color:String, duration:Float, force:Bool = false)
-		{
-			cameraFade(camera,color,duration,force);
-		});
-
-
-		script.set("setCameraScroll", function(camera:String,x:Float,y:Float)
-		{
-			setCameraScroll(camera,x,y);
-		});
-
-
-		script.set("moveCamera", function(target:String)
-		{
-			moveCamera(target);
-		});
-
-
-		script.set("getCameraZoom", function(camera:String):Float
-		{
-			return getCameraZoom(camera);
-		});
+		script.set("getCameraZoom", getCameraZoom);
 	}
 
-	static function setCameraZoom(camera:String, zoom:Float)
+	static function getCamera(camera:String):FlxCamera
 	{
-		if(PlayState.instance == null)
-			return;
+		if (PlayState.instance == null)
+			return null;
 
-		switch(camera.toLowerCase())
-		{
-			case "game":
-				PlayState.instance.camGame.zoom = zoom;
-			case "hud":
-				PlayState.instance.camHUD.zoom = zoom;
-		}
-	}
-
-	static function cameraShake(camera:String, intensity:Float, duration:Float)
-	{
-		if(PlayState.instance == null)
-			return;
-
-		switch(camera.toLowerCase())
-		{
-			case "game":
-				PlayState.instance.camGame.shake(intensity, duration);
-			case "hud":
-				PlayState.instance.camHUD.shake(intensity, duration);
-		}
-	}
-
-	static function cameraFlash(camera:String, color:String, duration:Float)
-	{
-		if(PlayState.instance == null)
-			return;
-
-		var cam = switch(camera.toLowerCase())
+		return switch (camera.toLowerCase())
 		{
 			case "hud":
 				PlayState.instance.camHUD;
+
+			case "other":
+				PlayState.instance.camOther;
+
 			default:
 				PlayState.instance.camGame;
-		};
-
-		cam.flash(FlxColor.fromString(color), duration);
+		}
 	}
+
+	static function parseColor(color:String):FlxColor
+	{
+		var c = FlxColor.fromString(color);
+		return c == null ? FlxColor.WHITE : c;
+	}
+
+	static function setCameraZoom(camera:String, zoom:Float):Void
+	{
+		var cam = getCamera(camera);
+		if (cam == null) return;
+
+		cam.zoom = zoom;
+	}
+
+	static function getCameraZoom(camera:String):Float
+	{
+		var cam = getCamera(camera);
+		return cam != null ? cam.zoom : 1;
+	}
+
+	static function cameraShake(camera:String, intensity:Float, duration:Float):Void
+	{
+		var cam = getCamera(camera);
+		if (cam == null) return;
+
+		cam.shake(intensity, duration);
+	}
+
+	static function cameraFlash(camera:String, color:String, duration:Float):Void
+	{
+		var cam = getCamera(camera);
+		if (cam == null) return;
+
+		cam.flash(parseColor(color), duration);
+	}
+
 	static function cameraFade(
 		camera:String,
 		color:String,
 		duration:Float,
-		force:Bool
-	)
+		force:Bool = false
+	):Void
 	{
-		if(PlayState.instance == null)
-			return;
-
-
 		var cam = getCamera(camera);
-
-		if(cam == null)
-			return;
-
+		if (cam == null) return;
 
 		cam.fade(
-			FlxColor.fromString(color),
+			parseColor(color),
 			duration,
 			false,
 			null,
 			force
 		);
 	}
-	static function getCamera(camera:String):Dynamic
-	{
-		if(PlayState.instance == null)
-			return null;
 
-
-		return switch(camera.toLowerCase())
-		{
-			case "hud":
-				PlayState.instance.camHUD;
-
-
-			case "other":
-				PlayState.instance.camOther;
-
-
-			default:
-				PlayState.instance.camGame;
-		}
-	}
-	static function setCameraScroll(
-		camera:String,
-		x:Float,
-		y:Float
-	)
+	static function setCameraScroll(camera:String, x:Float, y:Float):Void
 	{
 		var cam = getCamera(camera);
+		if (cam == null) return;
 
-		if(cam == null)
-			return;
-
-
-		cam.scroll.set(x,y);
+		cam.scroll.set(x, y);
 	}
-	static function moveCamera(target:String)
+
+	static function moveCamera(target:String):Void
 	{
-		if(PlayState.instance == null)
+		if (PlayState.instance == null)
 			return;
 
-
-		switch(target.toLowerCase())
+		switch (target.toLowerCase())
 		{
-			case "bf" | "boyfriend":
+			case "bf", "boyfriend":
 				PlayState.instance.moveCamera(true);
-
 
 			case "dad":
 				PlayState.instance.moveCamera(false);
 
-
+			// TODO: Реализовать отдельную камеру GF, если она поддерживается.
 			case "gf":
 				PlayState.instance.moveCamera(false);
 		}
 	}
-	static function getCameraZoom(camera:String):Float
-	{
-		var cam = getCamera(camera);
-
-		if(cam == null)
-			return 1;
-
-
-		return cam.zoom;
-	}
 }
+#end

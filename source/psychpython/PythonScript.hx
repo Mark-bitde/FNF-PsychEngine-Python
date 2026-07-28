@@ -11,23 +11,24 @@ import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
 import flixel.tweens.FlxTween;
 import states.PlayState;
+import psychpython.PythonCallbacks;
 
 class PythonScript
 {
 	public var interp:Interp;
 	public var file:String;
 
-	// Массив для хранения активных строк ошибок на экране
 	public static var hudLogTexts:Array<FlxText> = [];
 
 	public function new(path:String)
 	{
 		file = path;
 		interp = new Interp();
+		interp.maxDepth = 100000;
 
-		interp.maxDepth = 100;
-
-		// Новый Hython использует другую сигнатуру обработчика ошибок: (error, pos)
+		psychpython.PythonManager.scripts.push(this);
+		psychpython.PythonVariables.setup(this);
+		//new hython version
 		interp.errorHandler = function(error, pos)
 		{
 			var errorStr:String = Std.string(error);
@@ -36,19 +37,15 @@ class PythonScript
 				errorStr.indexOf("EUnknownVariable") != -1)
 				return;
 
-			// Получаем чистое имя файла без полного системного пути (например, "script.py")
 			var filename:String = file.split("/").pop().split("\\").pop();
-			
-			// Вытаскиваем номер строки из pos (если структуры pos нет или она пустая, ставим '?')
 			var lineNum:String = (pos != null) ? Std.string(pos.line) : "?";
 
-			// [АПДЕЙТ]: Форматируем вывод как в оригинальном Psych Engine: файл.py:строка: текст
 			createAndDisplayHudError(filename + ":" + lineNum + ": [Critical]: " + errorStr);
 
 			trace(
-				"[HYTHON CRITICAL ERROR] В файле '" +
+				"[HYTHON CRITICAL ERROR] File '" +
 				file +
-				"' на строке " + lineNum + ": " +
+				"':" + lineNum + ": " +
 				errorStr
 			);
 		}; 
@@ -72,7 +69,10 @@ class PythonScript
 			if(program != null)
 			{
 				interp.execute(program);
-				trace("[HYTHON] Успешно загружен скрипт: " + path);
+				trace("[HYTHON] Python script loaded successfully: " + path);
+				
+				// Automatically running the onCreate() method for this particular script
+				this.call('onCreate', []);
 			}
 		}
 		catch(e:Dynamic)
@@ -91,6 +91,18 @@ class PythonScript
 		if(args == null)
 			args = [];
 
+		// БЕЗОПАСНАЯ ПРОВЕРКА НА ОТСУТСТВИЕ МЕТОДА:
+		// Используем публичный метод getVar вместо приватного поля variables
+		try {
+			var functionObj = interp.getVar(func);
+			if (functionObj == null)
+				return null;
+		} catch(e:Dynamic) {
+			// Если getVar выкидывает ошибку при отсутствии переменной, 
+			// значит метода гарантированно нет в скрипте
+			return null;
+		}
+
 		try
 		{
 			return interp.callDef(func, args);
@@ -100,33 +112,32 @@ class PythonScript
 			var errorStr:String = Std.string(e);
 
 			if(errorStr.indexOf("not found") != -1 ||
-				errorStr.indexOf("Unknown") != -1)
+				errorStr.indexOf("Unknown") != -1 ||
+				errorStr.indexOf("does not exist") != -1)
 				return null;
 
 			var filename:String = file.split("/").pop().split("\\").pop();
 			
-			// Попробуем распарсить номер строки из текста рантайм-исключения, если hython его туда вшил
 			var lineNum:String = "Runtime";
 			if (errorStr.indexOf("line ") != -1) {
 				var splitErr = errorStr.split("line ");
 				lineNum = splitErr[1].split(" ")[0];
 			}
 
-			// Выводим ошибку рантайма с указанием файла
-			createAndDisplayHudError(filename + ":" + lineNum + ": " + errorStr);
-
 			trace(
-				"[HYTHON RUNTIME ERROR] Сбой в '" +
+				"[HYTHON RUNTIME ERROR] Error in function '" +
 				func +
 				"': " +
 				errorStr
 			);
-		}
 
+			createAndDisplayHudError(filename + ":" + lineNum + ": " + errorStr);
+		}
+		
 		return null;
 	}
 
-	// Кастомный менеджер логов в стиле ShadowMario
+
 	private function createAndDisplayHudError(message:String) {
 		if (PlayState.instance == null) return;
 
@@ -198,9 +209,21 @@ class PythonScript
 
 		interp = null;
 	}
+
+	public function getScriptName():String
+	{
+		var lastPart:String = file.split("/").pop().split("\\").pop();
+		var dotIndex:Int = lastPart.lastIndexOf(".");
+		if (dotIndex != -1) {
+			return lastPart.substring(0, dotIndex);
+		}
+		return lastPart;
+	}
 }
 
 #end
+
+
 
 
 //older hython version
@@ -219,4 +242,3 @@ class PythonScript
 				errorStr
 			);
 		}; */
-		// new hython version

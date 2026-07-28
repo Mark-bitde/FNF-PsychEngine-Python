@@ -1,23 +1,33 @@
+#if PYTHON_ALLOWED
 package psychpython;
+
+import states.PlayState;
+import backend.CoolUtil;
 
 class PythonDebug
 {
 	public static function setup(script:PythonScript)
 	{
-		script.set("debugPrint", function(value:Dynamic)
-		{
-			debugPrint(value);
-		});
-
-		script.set("trace", function(value:Dynamic)
-		{
-			debugPrint(value);
-		});
+		script.set("debugPrint", debugPrint);
+		script.set("trace", debugPrint);
 	}
 
-
-	static function debugPrint(value:Dynamic)
+	static function debugPrint(
+		text:Dynamic = '',
+		color:String = 'WHITE'
+	):Void
 	{
-		trace("[PYTHON] " + value);
+		var message:String = Std.string(text);
+
+		trace("[PYTHON] " + message);
+
+		if (PlayState.instance != null)
+		{
+			PlayState.instance.addTextToDebug(
+				message,
+				CoolUtil.colorFromString(color)
+			);
+		}
 	}
 }
+#end

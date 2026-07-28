@@ -3,88 +3,34 @@ package psychpython;
 import states.PlayState;
 import objects.Character;
 import flixel.util.FlxColor;
+
 class PythonCharacters
 {
 	public static function setup(script:PythonScript)
 	{
-		script.set("setCharacterX", function(char:String, x:Float)
-		{
-			setCharacterX(char,x);
-		});
+		script.set("setCharacterX", setCharacterX);
+		script.set("setCharacterY", setCharacterY);
 
+		script.set("playAnim", playAnim);
+		script.set("characterPlayAnim", playAnim);
 
-		script.set("setCharacterY", function(char:String, y:Float)
-		{
-			setCharacterY(char,y);
-		});
+		script.set("setCharacterAlpha", setCharacterAlpha);
+		script.set("setCharacterScale", setCharacterScale);
+		script.set("setCharacterAngle", setCharacterAngle);
+		script.set("setCharacterColor", setCharacterColor);
 
-
-		script.set("playAnim", function(char:String, anim:String, forced:Bool = false)
-		{
-			playAnim(char,anim,forced);
-		});
-
-
-		script.set("characterPlayAnim", function(char:String, anim:String, forced:Bool = false)
-		{
-			playAnim(char,anim,forced);
-		});
-
-
-		script.set("setCharacterAlpha", function(char:String, alpha:Float)
-		{
-			setCharacterAlpha(char,alpha);
-		});
-
-
-		script.set("setCharacterScale", function(char:String, x:Float, y:Float)
-		{
-			setCharacterScale(char,x,y);
-		});
-
-
-		script.set("setCharacterAngle", function(char:String, angle:Float)
-		{
-			setCharacterAngle(char,angle);
-		});
-
-
-		script.set("setCharacterColor", function(char:String, color:Int)
-		{
-			setCharacterColor(char,color);
-		});
-
-
-		script.set("getCharacterX", function(char:String):Float
-		{
-			return getCharacterX(char);
-		});
-
-
-		script.set("getCharacterY", function(char:String):Float
-		{
-			return getCharacterY(char);
-		});
-
-
-		script.set("getCharacterAlpha", function(char:String):Float
-		{
-			return getCharacterAlpha(char);
-		});
-
-
-		script.set("getCharacterAngle", function(char:String):Float
-		{
-			return getCharacterAngle(char);
-		});
+		script.set("getCharacterX", getCharacterX);
+		script.set("getCharacterY", getCharacterY);
+		script.set("getCharacterAlpha", getCharacterAlpha);
+		script.set("getCharacterAngle", getCharacterAngle);
 	}
 
 	static function getCharacter(char:String):Character
 	{
-		if(PlayState.instance == null)
+		if (PlayState.instance == null)
 			return null;
 
-		return switch(char.toLowerCase())
+		return switch (char.toLowerCase())
 		{
 			case "dad":
 				PlayState.instance.dad;
@@ -92,7 +38,7 @@ class PythonCharacters
 			case "gf":
 				PlayState.instance.gf;
 
-			case "boyfriend" | "bf":
+			case "bf", "boyfriend":
 				PlayState.instance.boyfriend;
 
 			default:
@@ -100,107 +46,106 @@ class PythonCharacters
 		}
 	}
 
-
-	static function setCharacterX(char:String, x:Float)
+	static function parseColor(color:Dynamic):FlxColor
 	{
-		var character = getCharacter(char);
-
-		if(character != null)
-			character.x = x;
-	}
-
-
-	static function setCharacterY(char:String, y:Float)
-	{
-		var character = getCharacter(char);
-
-		if(character != null)
-			character.y = y;
-	}
-
-
-	static function getCharacterX(char:String):Float
-	{
-		var character = getCharacter(char);
-
-		if(character != null)
-			return character.x;
-
-		return 0;
-	}
-
-
-	static function getCharacterY(char:String):Float
-	{
-		var character = getCharacter(char);
-
-		if(character != null)
-			return character.y;
-
-		return 0;
-	}
-
-
-	static function playAnim(char:String, anim:String, forced:Bool)
-	{
-		var character = getCharacter(char);
-
-		if(character != null)
-			character.playAnim(anim, forced);
-	}
-
-	static function setCharacterAlpha(char:String, alpha:Float)
-	{
-		var character = getCharacter(char);
-
-		if(character != null)
-			character.alpha = alpha;
-	}
-
-	static function setCharacterScale(char:String, x:Float, y:Float)
-	{
-		var character = getCharacter(char);
-
-		if(character != null)
+		switch (Type.typeof(color))
 		{
-			character.scale.set(x,y);
-			character.updateHitbox();
+			case TInt:
+				return cast color;
+
+			case TClass(String):
+				var parsed = FlxColor.fromString(cast color);
+				return parsed == null ? FlxColor.WHITE : parsed;
+
+			default:
+				return FlxColor.WHITE;
 		}
 	}
 
-	static function setCharacterAngle(char:String, angle:Float)
-	{
-		var character = getCharacter(char);
+	// Position
 
-		if(character != null)
-			character.angle = angle;
+	static function setCharacterX(char:String, x:Float):Void
+	{
+		var c = getCharacter(char);
+		if (c != null)
+			c.x = x;
 	}
 
-	static function setCharacterColor(char:String,color:Int)
+	static function setCharacterY(char:String, y:Float):Void
 	{
-		var character = getCharacter(char);
+		var c = getCharacter(char);
+		if (c != null)
+			c.y = y;
+	}
 
-		if(character != null)
-			character.color = color;
+	static function getCharacterX(char:String):Float
+	{
+		var c = getCharacter(char);
+		return c != null ? c.x : 0;
+	}
+
+	static function getCharacterY(char:String):Float
+	{
+		var c = getCharacter(char);
+		return c != null ? c.y : 0;
+	}
+
+	// Animation
+
+	static function playAnim(char:String, anim:String, forced:Bool = false):Void
+	{
+		var c = getCharacter(char);
+
+		if (c != null)
+			c.playAnim(anim, forced);
+	}
+
+	// Appearance
+
+	static function setCharacterAlpha(char:String, alpha:Float):Void
+	{
+		var c = getCharacter(char);
+
+		if (c != null)
+			c.alpha = alpha;
 	}
 
 	static function getCharacterAlpha(char:String):Float
 	{
-		var character = getCharacter(char);
+		var c = getCharacter(char);
+		return c != null ? c.alpha : 1;
+	}
 
-		if(character != null)
-			return character.alpha;
+	static function setCharacterAngle(char:String, angle:Float):Void
+	{
+		var c = getCharacter(char);
 
-		return 1;
+		if (c != null)
+			c.angle = angle;
 	}
 
 	static function getCharacterAngle(char:String):Float
 	{
-		var character = getCharacter(char);
+		var c = getCharacter(char);
+		return c != null ? c.angle : 0;
+	}
 
-		if(character != null)
-			return character.angle;
+	static function setCharacterScale(char:String, x:Float, y:Float):Void
+	{
+		var c = getCharacter(char);
 
-		return 0;
+		if (c == null)
+			return;
+
+		c.scale.set(x, y);
+		c.updateHitbox();
+	}
+
+	static function setCharacterColor(char:String, color:Dynamic):Void
+	{
+		var c = getCharacter(char);
+
+		if (c != null)
+			c.color = parseColor(color);
 	}
 }

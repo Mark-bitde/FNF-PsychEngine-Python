@@ -17,9 +17,9 @@ class PythonAPI
 		PythonSound.setup(script);
 
 		PythonEvents.setup(script);
-
+		PythonCommunication.setup(script);
 		PythonCharacters.setup(script);
-
+		PythonScripts.setup(script);
 		PythonShader.setup(script);
 
 		PythonVariables.setup(script);

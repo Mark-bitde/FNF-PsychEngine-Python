@@ -280,6 +280,11 @@ class FunkinLua {
 						return true;
 			}
 			#end
+			#if PYTHON_ALLOWED
+			var pythonPath:String = findScript(scriptFile, '.py');
+			if(pythonPath != null && psychpython.PythonManager.isRunningPyScript(pythonPath))
+				return true;
+			#end
 			return false;
 		});
 
