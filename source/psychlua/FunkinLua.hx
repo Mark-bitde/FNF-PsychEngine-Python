@@ -232,6 +232,11 @@ class FunkinLua {
 			if(ignoreSelf && !exclusions.contains(scriptName)) exclusions.push(scriptName);
 			game.setOnLuas(varName, arg, exclusions);
 		});
+		addLocalCallback("setOnPythons", function(varName:String, arg:Dynamic, ?ignoreSelf:Bool = false, ?exclusions:Array<String> = null) {
+			if(exclusions == null) exclusions = [];
+			if(ignoreSelf && !exclusions.contains(scriptName)) exclusions.push(scriptName);
+			game.setOnPythons(varName, arg, exclusions);
+		});
 
 		addLocalCallback("callOnScripts", function(funcName:String, ?args:Array<Dynamic> = null, ?ignoreStops=false, ?ignoreSelf:Bool = true, ?excludeScripts:Array<String> = null, ?excludeValues:Array<Dynamic> = null) {
 			if(excludeScripts == null) excludeScripts = [];
@@ -247,6 +252,11 @@ class FunkinLua {
 			if(excludeScripts == null) excludeScripts = [];
 			if(ignoreSelf && !excludeScripts.contains(scriptName)) excludeScripts.push(scriptName);
 			return game.callOnHScript(funcName, args, ignoreStops, excludeScripts, excludeValues);
+		});
+		addLocalCallback("callOnPythons", function(funcName:String, ?args:Array<Dynamic> = null, ?ignoreStops=false, ?ignoreSelf:Bool = true, ?excludeScripts:Array<String> = null, ?excludeValues:Array<Dynamic> = null) {
+			if(excludeScripts == null) excludeScripts = [];
+			if(ignoreSelf && !excludeScripts.contains(scriptName)) excludeScripts.push(scriptName);
+			return game.callOnPythons(funcName, args, ignoreStops, excludeScripts, excludeValues);
 		});
 
 		Lua_helper.add_callback(lua, "callScript", function(luaFile:String, funcName:String, ?args:Array<Dynamic> = null) {
@@ -280,11 +290,6 @@ class FunkinLua {
 						return true;
 			}
 			#end
-			#if PYTHON_ALLOWED
-			var pythonPath:String = findScript(scriptFile, '.py');
-			if(pythonPath != null && psychpython.PythonManager.isRunningPyScript(pythonPath))
-				return true;
-			#end
 			return false;
 		});
 
@@ -295,7 +300,23 @@ class FunkinLua {
 		Lua_helper.add_callback(lua, "getVar", function(varName:String) {
 			return MusicBeatState.getVariables().get(varName);
 		});
+		Lua_helper.add_callback(lua, "addPyScript", function(pyFile:String, ?ignoreAlreadyRunning:Bool = false) {
+			var pyPath:String = findScript(pyFile);
+			if(pyPath != null)
+			{
+				if(!ignoreAlreadyRunning)
+					for (luaInstance in game.pythonArray)
+						if(luaInstance.scriptName == pyPath)
+						{
+							luaTrace('addPyScript: The script "' + pyPath + '" is already running!');
+							return;
+						}
 
+				new psychpython.FunkinPython(pyPath);
+				return;
+			}
+			luaTrace("addLuaScript: Script doesn't exist!", false, false, FlxColor.RED);
+		});
 		Lua_helper.add_callback(lua, "addLuaScript", function(luaFile:String, ?ignoreAlreadyRunning:Bool = false) {
 			var luaPath:String = findScript(luaFile);
 			if(luaPath != null)
@@ -378,7 +399,29 @@ class FunkinLua {
 			luaTrace("removeHScript: HScript is not supported on this platform!", false, false, FlxColor.RED);
 			#end
 		});
-
+		Lua_helper.add_callback(lua, "removePyScript", function(scriptFile:String) {
+			#if PYTHON_ALLOWED
+			var scriptPath:String = findScript(scriptFile);
+			if (scriptPath != null)
+			{
+				var foundAny:Bool = false;
+				for(pyInstance in game.pythonArray)
+				{
+					if(pyInstance.scriptName == scriptPath)
+					{
+						trace('Closing Python script $scriptPath');
+						pyInstance.stop();
+						foundAny = true;
+					}
+				}
+				if(foundAny) return true;
+			}
+			luaTrace('removePyScript: Script $scriptFile isn\'t running!', false, false, FlxColor.RED);
+			return false;
+			#else
+			luaTrace('removePyScript: Python is not supported on this platform!');
+			#end
+		});
 		Lua_helper.add_callback(lua, "loadSong", function(?name:String = null, ?difficultyNum:Int = -1) {
 			if(name == null || name.length < 1)
 				name = Song.loadedSongName;

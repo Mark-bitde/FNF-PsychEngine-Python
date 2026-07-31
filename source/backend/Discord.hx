@@ -163,6 +163,16 @@ class DiscordClient
 		});
 	}
 	#end
+	#if PYTHON_ALLOWED
+	public static function addPyCallbacks(py:paopao.hython.Interp)
+	{
+		py.setVar("changeDiscordPresence", changePresence);
+		py.setVar("changeDiscordClientID", function(?newID:String) {
+			if(newID == null) newID = _defaultID;
+			clientID = newID;
+		});
+	}
+	#end
 }
 
 @:allow(backend.DiscordClient)

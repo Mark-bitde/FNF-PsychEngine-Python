@@ -103,4 +103,15 @@ class Language
 		});
 	}
 	#end
+	#if PYTHON_ALLOWED
+	public static function addPyCallbacks(py:paopao.hython.Interp)
+	{
+		py.setVar("getTranslationPhrase", function(key:String, ?defaultPhrase:String, ?values:Array<Dynamic> = null) {
+			return getPhrase(key, defaultPhrase, values);
+		});
+		py.setVar("getFileTranslation", function(key:String) {
+			return getFileTranslation(key);
+		});
+	}
+	#end
 }

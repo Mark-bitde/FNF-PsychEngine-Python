@@ -1,6 +1,5 @@
 package states;
 
-import psychpython.PythonScript;
 import backend.Highscore;
 import backend.StageData;
 import backend.WeekData;
@@ -55,10 +54,11 @@ import crowplexus.iris.Iris;
 import crowplexus.hscript.Expr.Error as IrisError;
 import crowplexus.hscript.Printer;
 #end
-
 #if PYTHON_ALLOWED
-import psychpython.PythonCallbacks;
-import psychpython.PythonManager;
+import psychpython.*;
+#else
+import psychpython.PyUtils;
+import psychpython.HScript;
 #end
 /**
  * This is where all the Gameplay stuff happens and is managed
@@ -104,7 +104,9 @@ class PlayState extends MusicBeatState
 	#if HSCRIPT_ALLOWED
 	public var hscriptArray:Array<HScript> = [];
 	#end
-
+	#if PYTHON_ALLOWED
+	public var pythonArray:Array<FunkinPython> = [];
+	#end
 	public var BF_X:Float = 770;
 	public var BF_Y:Float = 100;
 	public var DAD_X:Float = 100;
@@ -256,7 +258,7 @@ class PlayState extends MusicBeatState
 	public static var instance:PlayState;
 	#if LUA_ALLOWED public var luaArray:Array<FunkinLua> = []; #end
 
-	#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
+	#if (LUA_ALLOWED || HSCRIPT_ALLOWED || PYTHON_ALLOWED)
 	private var luaDebugGroup:FlxTypedGroup<psychlua.DebugLuaText>;
 	#end
 	public var introSoundsSuffix:String = '';
@@ -274,9 +276,6 @@ class PlayState extends MusicBeatState
 	override public function create()
 	{
 		//trace('Playback Rate: ' + playbackRate);
-		//#if PYTHON_ALLOWED
-		//PythonCallbacks.onCreate();
-		//#end
 		_lastLoadedModDirectory = Mods.currentModDirectory;
 		Paths.clearStoredMemory();
 		if(nextReloadAll)
@@ -400,7 +399,7 @@ class PlayState extends MusicBeatState
 		}
 		if(isPixelStage) introSoundsSuffix = '-pixel';
 
-		#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
+		#if (LUA_ALLOWED || HSCRIPT_ALLOWED || PYTHON_ALLOWED)
 		luaDebugGroup = new FlxTypedGroup<psychlua.DebugLuaText>();
 		luaDebugGroup.cameras = [camOther];
 		add(luaDebugGroup);
@@ -451,9 +450,9 @@ class PlayState extends MusicBeatState
 				if(file.toLowerCase().endsWith('.hx'))
 					initHScript(folder + file);
 				#end
-
 				#if PYTHON_ALLOWED
-				if(file.toLowerCase().endsWith('.py')) new psychpython.PythonScript(folder + file);
+				if(file.toLowerCase().endsWith('.py'))
+					new FunkinPython(folder + file);
 				#end
 			}
 		#end
@@ -476,8 +475,6 @@ class PlayState extends MusicBeatState
 		#if LUA_ALLOWED startLuasNamed('stages/' + curStage + '.lua'); #end
 		#if HSCRIPT_ALLOWED startHScriptsNamed('stages/' + curStage + '.hx'); #end
 		#if PYTHON_ALLOWED startPythonsNamed('stages/' + curStage + '.py'); #end
-
-
 		// CHARACTER SCRIPTS
 		if(gf != null) startCharacterScripts(gf.curCharacter);
 		startCharacterScripts(dad.curCharacter);
@@ -620,10 +617,9 @@ class PlayState extends MusicBeatState
 				if(file.toLowerCase().endsWith('.hx'))
 					initHScript(folder + file);
 				#end
-
 				#if PYTHON_ALLOWED
-				if (file.toLowerCase().endsWith('.py'))
-					new psychpython.PythonScript(folder + file);
+				if(file.toLowerCase().endsWith('.py'))
+					new FunkinPython(folder + file);
 				#end
 			}
 		#end
@@ -666,8 +662,6 @@ class PlayState extends MusicBeatState
 		cachePopUpScore();
 
 		if(eventNotes.length < 1) checkEventNote();
-		
-		
 	}
 
 	function set_songSpeed(value:Float):Float
@@ -716,7 +710,7 @@ class PlayState extends MusicBeatState
 		return playbackRate;
 	}
 
-	#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
+	#if (LUA_ALLOWED || HSCRIPT_ALLOWED || PYTHON_ALLOWED)
 	public function addTextToDebug(text:String, color:FlxColor) {
 		var newText:psychlua.DebugLuaText = luaDebugGroup.recycle(psychlua.DebugLuaText);
 		newText.text = text;
@@ -812,6 +806,34 @@ class PlayState extends MusicBeatState
 		}
 		#end
 
+		// Python
+		#if PYTHON_ALLOWED
+		var doPush:Bool = false;
+		var scriptFile:String = 'characters/' + name + '.py';
+		#if MODS_ALLOWED
+		var replacePath:String = Paths.modFolders(scriptFile);
+		if(FileSystem.exists(replacePath))
+		{
+			scriptFile = replacePath;
+			doPush = true;
+		}
+		else
+		#end
+		{
+			scriptFile = Paths.getSharedPath(scriptFile);
+			if(FileSystem.exists(scriptFile))
+				doPush = true;
+		}
+
+		if(doPush)
+		{
+			if(Iris.instances.exists(scriptFile))
+				doPush = false;
+
+			if(doPush) new FunkinPython(scriptFile);
+		}
+		#end
+
 		// HScript
 		#if HSCRIPT_ALLOWED
 		var doPush:Bool = false;
@@ -843,7 +865,8 @@ class PlayState extends MusicBeatState
 
 	public function getLuaObject(tag:String):Dynamic
 		return variables.get(tag);
-
+	public function getPyObject(tag:String):Dynamic
+		return variables.get(tag);
 	function startCharacterPos(char:Character, ?gfCheck:Bool = false) {
 		if(gfCheck && char.curCharacter.startsWith('gf')) { //IF DAD IS GIRLFRIEND, HE GOES TO HER POSITION
 			char.setPosition(GF_X, GF_Y);
@@ -901,7 +924,7 @@ class PlayState extends MusicBeatState
 				videoCutscene.play();
 			return videoCutscene;
 		}
-		#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
+		#if (LUA_ALLOWED || HSCRIPT_ALLOWED || PYTHON_ALLOWED)
 		else addTextToDebug("Video not found: " + fileName, FlxColor.RED);
 		#else
 		else FlxG.log.error("Video not found: " + fileName);
@@ -985,7 +1008,6 @@ class PlayState extends MusicBeatState
 	{
 		if(startedCountdown) {
 			callOnScripts('onStartCountdown');
-			
 			return false;
 		}
 
@@ -1012,7 +1034,6 @@ class PlayState extends MusicBeatState
 			Conductor.songPosition = -Conductor.crochet * 5 + Conductor.offset;
 			setOnScripts('startedCountdown', true);
 			callOnScripts('onCountdownStarted');
-			
 
 			var swagCounter:Int = 0;
 			if (startOnTime > 0) {
@@ -1080,9 +1101,7 @@ class PlayState extends MusicBeatState
 				stagesFunc(function(stage:BaseStage) stage.countdownTick(tick, swagCounter));
 				callOnLuas('onCountdownTick', [swagCounter]);
 				callOnHScript('onCountdownTick', [tick, swagCounter]);
-				#if PYTHON_ALLOWED
-				PythonCallbacks.call('onCountdownTick', [swagCounter]);
-				#end
+				callOnPythons('onCountdownTick', [swagCounter]);
 				swagCounter += 1;
 			}, 5);
 		}
@@ -1173,7 +1192,6 @@ class PlayState extends MusicBeatState
 			doScoreBop();
 
 		callOnScripts('onUpdateScore', [miss]);
-		
 	}
 
 	public dynamic function updateScoreText()
@@ -1258,12 +1276,10 @@ class PlayState extends MusicBeatState
 	public function startNextDialogue() {
 		dialogueCount++;
 		callOnScripts('onNextDialogue', [dialogueCount]);
-		
 	}
 
 	public function skipDialogue() {
 		callOnScripts('onSkipDialogue', [dialogueCount]);
-		
 	}
 
 	function startSong():Void
@@ -1300,7 +1316,6 @@ class PlayState extends MusicBeatState
 		#end
 		setOnScripts('songLength', songLength);
 		callOnScripts('onSongStart');
-		
 	}
 
 	private var noteTypes:Array<String> = [];
@@ -1722,9 +1737,9 @@ class PlayState extends MusicBeatState
 		}
 		else FlxG.camera.followLerp = 0;
 		callOnScripts('onUpdate', [elapsed]);
-		
+
 		super.update(elapsed);
-		
+
 		setOnScripts('curDecStep', curDecStep);
 		setOnScripts('curDecBeat', curDecBeat);
 
@@ -1821,9 +1836,7 @@ class PlayState extends MusicBeatState
 
 				callOnLuas('onSpawnNote', [notes.members.indexOf(dunceNote), dunceNote.noteData, dunceNote.noteType, dunceNote.isSustainNote, dunceNote.strumTime]);
 				callOnHScript('onSpawnNote', [dunceNote]);
-				#if PYTHON_ALLOWED
-				PythonCallbacks.call('onSpawnNote', [notes.members.indexOf(dunceNote), dunceNote.noteData, dunceNote.noteType, dunceNote.isSustainNote, dunceNote.strumTime]);
-				#end
+				callOnPythons('onSpawnNote', [notes.members.indexOf(dunceNote), dunceNote.noteData, dunceNote.noteType, dunceNote.isSustainNote, dunceNote.strumTime]);
 				var index:Int = unspawnNotes.indexOf(dunceNote);
 				unspawnNotes.splice(index, 1);
 			}
@@ -1905,8 +1918,6 @@ class PlayState extends MusicBeatState
 
 		setOnScripts('botPlay', cpuControlled);
 		callOnScripts('onUpdatePost', [elapsed]);
-
-		
 	}
 
 	// Health icon updaters
@@ -2328,7 +2339,7 @@ class PlayState extends MusicBeatState
 				{
 					var len:Int = e.message.indexOf('\n') + 1;
 					if(len <= 0) len = e.message.length;
-					#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
+					#if (LUA_ALLOWED || HSCRIPT_ALLOWED || PYTHON_ALLOWED)
 					addTextToDebug('ERROR ("Set Property" Event) - ' + e.message.substr(0, len), FlxColor.RED);
 					#else
 					FlxG.log.warn('ERROR ("Set Property" Event) - ' + e.message.substr(0, len));
@@ -2784,13 +2795,10 @@ class PlayState extends MusicBeatState
 		}
 		else
 		{
-			if (ClientPrefs.data.ghostTapping) {
+			if (ClientPrefs.data.ghostTapping)
 				callOnScripts('onGhostTap', [key]);
-				
-			} else {
+			else
 				noteMissPress(key);
-				
-			}
 		}
 
 		// Needed for the  "Just the Two of Us" achievement.
@@ -2807,7 +2815,6 @@ class PlayState extends MusicBeatState
 			spr.resetAnim = 0;
 		}
 		callOnScripts('onKeyPress', [key]);
-		
 	}
 
 	public static function sortHitNotes(a:Note, b:Note):Int
@@ -2832,14 +2839,8 @@ class PlayState extends MusicBeatState
 		if(cpuControlled || !startedCountdown || paused || key < 0 || key >= playerStrums.length) return;
 
 		var ret:Dynamic = callOnScripts('onKeyReleasePre', [key]);
-		var pyRet:Dynamic = null;
-
 		if(ret == LuaUtils.Function_Stop) return;
 
-		
-
-		/*if(pyRet == LuaUtils.Function_Stop)
-			return;*/
 		var spr:StrumNote = playerStrums.members[key];
 		if(spr != null)
 		{
@@ -2847,7 +2848,6 @@ class PlayState extends MusicBeatState
 			spr.resetAnim = 0;
 		}
 		callOnScripts('onKeyRelease', [key]);
-		
 	}
 
 	public static function getKeyFromEvent(arr:Array<String>, key:FlxKey):Int
@@ -2929,12 +2929,10 @@ class PlayState extends MusicBeatState
 		noteMissCommon(daNote.noteData, daNote);
 		stagesFunc(function(stage:BaseStage) stage.noteMiss(daNote));
 		var result:Dynamic = callOnLuas('noteMiss', [notes.members.indexOf(daNote), daNote.noteData, daNote.noteType, daNote.isSustainNote]);
-		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('noteMiss', [daNote]);
-		#if PYTHON_ALLOWED
-		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) {
-			psychpython.PythonCallbacks.call('noteMiss', [notes.members.indexOf(daNote), daNote.noteData, daNote.noteType, daNote.isSustainNote]);
+		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) { 
+			callOnHScript('noteMiss', [daNote]);
+			callOnPythons('noteMiss', [notes.members.indexOf(daNote), daNote.noteData, daNote.noteType, daNote.isSustainNote]);
 		}
-		#end
 	}
 
 	function noteMissPress(direction:Int = 1):Void //You pressed a key when there was no notes to press for this key
@@ -2945,7 +2943,6 @@ class PlayState extends MusicBeatState
 		FlxG.sound.play(Paths.soundRandom('missnote', 1, 3), FlxG.random.float(0.1, 0.2));
 		stagesFunc(function(stage:BaseStage) stage.noteMissPress(direction));
 		callOnScripts('noteMissPress', [direction]);
-		
 	}
 
 	function noteMissCommon(direction:Int, note:Note = null)
@@ -3030,17 +3027,12 @@ class PlayState extends MusicBeatState
 	}
 
 	function opponentNoteHit(note:Note):Void
-	{
+	{	
+		var pyRes:Dynamic = callOnPythons('opponentNoteHitPre', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
 		var result:Dynamic = callOnLuas('opponentNoteHitPre', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
-		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript('opponentNoteHitPre', [note]);
-		#if PYTHON_ALLOWED
-		
-		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) {
-			var pyResult:Dynamic = psychpython.PythonCallbacks.call('opponentNoteHitPre', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
-			if(pyResult != null && (pyResult == LuaUtils.Function_Stop || pyResult == "Function_Stop")) result = LuaUtils.Function_Stop;
-		}
-		#end
-		if(result == LuaUtils.Function_Stop) return;
+		if((result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) && (pyRes != PyUtils.Function_Stop && pyRes != LuaUtils.Function_StopHScript && pyRes != LuaUtils.Function_StopAll && pyRes != PyUtils.Function_StopPython)) result = callOnHScript('opponentNoteHitPre', [note]);
+
+		if(result == LuaUtils.Function_Stop || pyRes == PyUtils.Function_Stop) return;
 
 		if (songName != 'tutorial')
 			camZooming = true;
@@ -3078,13 +3070,10 @@ class PlayState extends MusicBeatState
 		
 		stagesFunc(function(stage:BaseStage) stage.opponentNoteHit(note));
 		var result:Dynamic = callOnLuas('opponentNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
-		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('opponentNoteHit', [note]);
-		#if PYTHON_ALLOWED
-		
 		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) {
-			psychpython.PythonCallbacks.call('opponentNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
+			callOnHScript('opponentNoteHit', [note]);
+			callOnPythons('opponentNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
 		}
-		#end
 		if (!note.isSustainNote) invalidateNote(note);
 	}
 
@@ -3096,17 +3085,11 @@ class PlayState extends MusicBeatState
 		var isSus:Bool = note.isSustainNote; //GET OUT OF MY HEAD, GET OUT OF MY HEAD, GET OUT OF MY HEAD
 		var leData:Int = Math.round(Math.abs(note.noteData));
 		var leType:String = note.noteType;
-
+		var pyRes:Dynamic = callOnPythons('goodNoteHitPre', [notes.members.indexOf(note), leData, leType, isSus]);
 		var result:Dynamic = callOnLuas('goodNoteHitPre', [notes.members.indexOf(note), leData, leType, isSus]);
-		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript('goodNoteHitPre', [note]);
-		#if PYTHON_ALLOWED
-		
-		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) {
-			var pyResult:Dynamic = psychpython.PythonCallbacks.call('goodNoteHitPre', [notes.members.indexOf(note), leData, leType, isSus]);
-			if(pyResult != null && (pyResult == LuaUtils.Function_Stop || pyResult == "Function_Stop")) result = LuaUtils.Function_Stop;
-		}
-		#end
-		if(result == LuaUtils.Function_Stop) return;
+		if((result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) && (pyRes != PyUtils.Function_Stop && pyRes != LuaUtils.Function_StopHScript && pyRes != LuaUtils.Function_StopAll && pyRes != PyUtils.Function_StopPython)) result = callOnHScript('goodNoteHitPre', [note]);
+
+		if(result == LuaUtils.Function_Stop || pyRes == PyUtils.Function_Stop) return;
 
 		note.wasGoodHit = true;
 
@@ -3192,12 +3175,10 @@ class PlayState extends MusicBeatState
 
 		stagesFunc(function(stage:BaseStage) stage.goodNoteHit(note));
 		var result:Dynamic = callOnLuas('goodNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
-		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('goodNoteHit', [note]);
-		#if PYTHON_ALLOWED
 		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) {
-			psychpython.PythonCallbacks.call('goodNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
+			callOnHScript('goodNoteHit', [note]);
+			callOnPythons('goodNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
 		}
-		#end
 		if(!note.isSustainNote) invalidateNote(note);
 	}
 
@@ -3250,8 +3231,15 @@ class PlayState extends MusicBeatState
 		hscriptArray = null;
 		#end
 		#if PYTHON_ALLOWED
-		PythonCallbacks.call('onDestroy');
-		PythonManager.destroy();
+		for(pyScript in pythonArray)
+		{
+			if (pyScript != null)
+			{
+				pyScript.call('onDestroy', []);
+				pyScript.stop();
+			}
+		}
+		pythonArray = null; 
 		#end
 		stagesFunc(function(stage:BaseStage) stage.destroy());
 
@@ -3291,7 +3279,6 @@ class PlayState extends MusicBeatState
 		lastStepHit = curStep;
 		setOnScripts('curStep', curStep);
 		callOnScripts('onStepHit');
-		
 	}
 
 	var lastBeatHit:Int = -1;
@@ -3319,7 +3306,6 @@ class PlayState extends MusicBeatState
 
 		setOnScripts('curBeat', curBeat);
 		callOnScripts('onBeatHit');
-		
 	}
 
 	public function characterBopper(beat:Int):Void
@@ -3367,7 +3353,6 @@ class PlayState extends MusicBeatState
 
 		setOnScripts('curSection', curSection);
 		callOnScripts('onSectionHit');
-		
 	}
 
 	#if LUA_ALLOWED
@@ -3393,24 +3378,24 @@ class PlayState extends MusicBeatState
 		return false;
 	}
 	#end
-
 	#if PYTHON_ALLOWED
 	public function startPythonsNamed(pyFile:String)
-	{
+	{	
 		#if MODS_ALLOWED
 		var pyToLoad:String = Paths.modFolders(pyFile);
-		if (!FileSystem.exists(pyToLoad)) pyToLoad = Paths.getSharedPath(pyFile);
-		if (FileSystem.exists(pyToLoad))
+		if(!FileSystem.exists(pyToLoad))
+			pyToLoad = Paths.getSharedPath(pyFile);
 		
+		if(FileSystem.exists(pyToLoad))
 		#elseif sys
 		var pyToLoad:String = Paths.getSharedPath(pyFile);
-		if (OpenFlAssets.exists(pyToLoad))
+		if(OpenFlAssets.exists(pyToLoad))
 		#end
 		{
-			for (script in psychpython.PythonManager.scripts)
-				if(script.getScriptName() == pyToLoad) return false;
+			for (pyScript in pythonArray)
+				if(pyScript.scriptName == pyToLoad) return false;
 
-			new psychpython.PythonScript(pyToLoad);
+			new FunkinPython(pyToLoad);
 			return true;
 		}
 		return false;
@@ -3458,32 +3443,7 @@ class PlayState extends MusicBeatState
 		}
 	}
 	#end
-	/* #if PYTHON_ALLOWED
-	public function initPythonScript(file:String)
-	{
-		
-		try
-		{
-			// Вызываем ваш менеджер. Он сам создаст инстанс, добавит в массив и затрейсит лог
-			psychpython.PythonManager.addScript(file);
-			
-			// Находим последний добавленный скрипт для инициализации его шлюзов
-			var lastIdx = psychpython.PythonManager.scripts.length - 1;
-			if (lastIdx >= 0) {
-				var newScript = psychpython.PythonManager.scripts[lastIdx];
-				
-				// Настраиваем все ваши модули API для этого скрипта
-				psychpython.PythonVariables.setup(newScript);
-				// psychpython.PythonHScript.setup(newScript); // Если используете callMethod
-			}
-		}
-		catch(e:Dynamic)
-		{
-			trace('[PYTHON INIT ERROR] Failed to load script ' + file + ': ' + e);
-		}
-		
-	}
-	#end*/ 
+
 	public function callOnScripts(funcToCall:String, args:Array<Dynamic> = null, ignoreStops = false, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
 		var returnVal:Dynamic = LuaUtils.Function_Continue;
 		if(args == null) args = [];
@@ -3491,20 +3451,66 @@ class PlayState extends MusicBeatState
 		if(excludeValues == null) excludeValues = [LuaUtils.Function_Continue];
 
 		var result:Dynamic = callOnLuas(funcToCall, args, ignoreStops, exclusions, excludeValues);
+		if(result == null || excludeValues.contains(result)) result = callOnPythons(funcToCall, args, ignoreStops, exclusions, excludeValues);
 		if(result == null || excludeValues.contains(result)) result = callOnHScript(funcToCall, args, ignoreStops, exclusions, excludeValues);
-		
-		#if PYTHON_ALLOWED
-		// Если Lua и HScript не заблокировали событие, отправляем его в Python
-		if(result == null || excludeValues.contains(result)) {
-			var pyResult:Dynamic = psychpython.PythonCallbacks.call(funcToCall, args);
-			// Если Python вернул что-то важное (например, "Function_Stop"), перезаписываем результат
-			if(pyResult != null && !excludeValues.contains(pyResult)) result = pyResult;
-		}
-		#end
-
 		return result;
 	}
 
+	public function callOnPythons(funcToCall:String, args:Array<Dynamic> = null, ignoreStops = false, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
+		// По умолчанию возвращаем Continue, чтобы игра не зависала, если скрипты ничего не заблокировали
+		var returnVal:Dynamic = PyUtils.Function_Continue; 
+		
+		#if PYTHON_ALLOWED
+		if (args == null) args = [];
+		if (exclusions == null) exclusions = [];
+		if (excludeValues == null) excludeValues = [PyUtils.Function_Continue];
+
+		// Массив для сбора «мертвых» скриптов, которые нужно удалить из памяти
+		var deadScripts:Array<FunkinPython> = [];
+		
+		for (script in pythonArray)
+		{
+			// Безопасная проверка на null
+			if (script == null) continue;
+
+			// Если скрипт уже закрыт, помечаем его на удаление и пропускаем
+			if (script.closed)
+			{
+				if (!deadScripts.contains(script)) deadScripts.push(script);
+				continue;
+			}
+
+			// Пропускаем исключенные скрипты
+			if (exclusions.contains(script.scriptName))
+				continue;
+
+			// Вызываем функцию в Python
+			var myValue:Dynamic = script.call(funcToCall, args);
+			
+			// Если скрипт попросил остановить выполнение (StopPython или StopAll)
+			if ((myValue == PyUtils.Function_StopPython || myValue == PyUtils.Function_StopAll) && !excludeValues.contains(myValue) && !ignoreStops)
+			{
+				returnVal = myValue;
+				break; // Прерываем цикл, так как выполнение заблокировано
+			}
+		
+			// Запоминаем кастомный результат скрипта, если он не в списке игнорируемых
+			if (myValue != null && !excludeValues.contains(myValue))
+				returnVal = myValue;
+
+			// Если скрипт закрылся прямо во время выполнения своей функции
+			if (script.closed && !deadScripts.contains(script)) 
+				deadScripts.push(script);
+		}
+
+		// Корректно очищаем pythonArray от закрытых скриптов
+		if (deadScripts.length > 0)
+			for (script in deadScripts)
+				pythonArray.remove(script);
+		#end
+		
+		return returnVal;
+	}
 	public function callOnLuas(funcToCall:String, args:Array<Dynamic> = null, ignoreStops = false, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
 		var returnVal:Dynamic = LuaUtils.Function_Continue;
 		#if LUA_ALLOWED
@@ -3586,15 +3592,7 @@ class PlayState extends MusicBeatState
 		if(exclusions == null) exclusions = [];
 		setOnLuas(variable, arg, exclusions);
 		setOnHScript(variable, arg, exclusions);
-		#if PYTHON_ALLOWED
-		// Проверяем, не находится ли имя скрипта в списке исключений
-		// (Вместо "my_script_name" можно передать проверку, если у вас есть массив активных скриптов)
-		PythonManager.setOnPython(
-			variable,
-			arg,
-			exclusions
-		);
-		#end
+		setOnPythons(variable, arg, exclusions);
 	}
 
 	public function setOnLuas(variable:String, arg:Dynamic, exclusions:Array<String> = null) {
@@ -3617,6 +3615,16 @@ class PlayState extends MusicBeatState
 				continue;
 
 			script.set(variable, arg);
+		}
+		#end
+	}
+	public function setOnPythons(variable:String, arg:Dynamic, exclusions:Array<String> = null) {
+		#if PYTHON_ALLOWED
+		if(exclusions == null) exclusions = [];
+		for (pyScript in pythonArray) {
+			if (exclusions.contains(pyScript.scriptName))
+				continue;
+			pyScript.interp.setVar(variable, arg);
 		}
 		#end
 	}
@@ -3785,7 +3793,7 @@ class PlayState extends MusicBeatState
 				return true;
 			}
 		}
-			#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
+			#if (LUA_ALLOWED || HSCRIPT_ALLOWED || PYTHON_ALLOWED)
 			addTextToDebug('Missing shader $name .frag AND .vert files!', FlxColor.RED);
 			#else
 			FlxG.log.warn('Missing shader $name .frag AND .vert files!');

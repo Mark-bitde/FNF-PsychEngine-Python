@@ -117,11 +117,8 @@
 	<haxelib name="flixel" version="5.6.1"/>
 	<haxelib name="flixel-addons" version="3.2.2"/>
 	<haxelib name="tjson" version="1.4.0"/>
-	
-	<haxelib name="hython" version="git" if="PYTHON_ALLOWED"/>
 	<!-- Or install with: haxelib git hython https://github.com/Paopun20/Hython.git (needs some changes in code) -->
-	<!-- <haxelib name="hython" version="git" if="PYTHON_ALLOWED"/> -->
-
+	<haxelib name="hython" version="git" if="PYTHON_ALLOWED" />
 	<!--Psych stuff needed-->
 	<haxelib name="linc_luajit" if="LUA_ALLOWED"/>
 	<haxelib name="hscript-iris" if="HSCRIPT_ALLOWED" version="1.1.3"/>

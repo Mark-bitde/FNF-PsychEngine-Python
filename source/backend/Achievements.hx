@@ -333,5 +333,56 @@ class Achievements {
 		Lua_helper.add_callback(lua, "achievementExists", function(name:String) return achievements.exists(name));
 	}
 	#end
+	#if PYTHON_ALLOWED
+	public static function addPyCallbacks(py:paopao.hython.Interp)
+	{
+		py.setVar("getAchievementScore", function(name:String):Float
+		{
+			if(!achievements.exists(name))
+			{
+				FunkinLua.luaTrace('getAchievementScore: Couldnt find achievement: $name', false, false, FlxColor.RED);
+				return -1;
+			}
+			return getScore(name);
+		});
+		py.setVar("setAchievementScore", function(name:String, ?value:Float = 0, ?saveIfNotUnlocked:Bool = true):Float
+		{
+			if(!achievements.exists(name))
+			{
+				FunkinLua.luaTrace('setAchievementScore: Couldnt find achievement: $name', false, false, FlxColor.RED);
+				return -1;
+			}
+			return setScore(name, value, saveIfNotUnlocked);
+		});
+		py.setVar("addAchievementScore", function(name:String, ?value:Float = 1, ?saveIfNotUnlocked:Bool = true):Float
+		{
+			if(!achievements.exists(name))
+			{
+				FunkinLua.luaTrace('addAchievementScore: Couldnt find achievement: $name', false, false, FlxColor.RED);
+				return -1;
+			}
+			return addScore(name, value, saveIfNotUnlocked);
+		});
+		py.setVar("unlockAchievement", function(name:String):Dynamic
+		{
+			if(!achievements.exists(name))
+			{
+				FunkinLua.luaTrace('unlockAchievement: Couldnt find achievement: $name', false, false, FlxColor.RED);
+				return null;
+			}
+			return unlock(name);
+		});
+		py.setVar("isAchievementUnlocked", function(name:String):Dynamic
+		{
+			if(!achievements.exists(name))
+			{
+				FunkinLua.luaTrace('isAchievementUnlocked: Couldnt find achievement: $name', false, false, FlxColor.RED);
+				return null;
+			}
+			return isUnlocked(name);
+		});
+		py.setVar("achievementExists", function(name:String) return achievements.exists(name));
+	}
+	#end
 }
 #end

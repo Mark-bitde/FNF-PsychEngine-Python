@@ -198,15 +198,7 @@ class MusicBeatState extends FlxState
 			stage.sectionHit();
 		});
 	}
-	public function getCurBeat():Int
-	{
-		return curBeat;
-	}
 
-	public function getCurStep():Int
-	{
-		return curStep;
-	}
 	function stagesFunc(func:BaseStage->Void)
 	{
 		for (stage in stages)
