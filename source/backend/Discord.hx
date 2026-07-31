@@ -164,7 +164,7 @@ class DiscordClient
 	}
 	#end
 	#if PYTHON_ALLOWED
-	public static function addPyCallbacks(py:paopao.hython.Interp)
+	public static function addPyCallbacks(py:markbitde.hython.Interp)
 	{
 		py.setVar("changeDiscordPresence", changePresence);
 		py.setVar("changeDiscordClientID", function(?newID:String) {

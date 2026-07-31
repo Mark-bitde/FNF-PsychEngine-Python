@@ -104,7 +104,7 @@ class Language
 	}
 	#end
 	#if PYTHON_ALLOWED
-	public static function addPyCallbacks(py:paopao.hython.Interp)
+	public static function addPyCallbacks(py:markbitde.hython.Interp)
 	{
 		py.setVar("getTranslationPhrase", function(key:String, ?defaultPhrase:String, ?values:Array<Dynamic> = null) {
 			return getPhrase(key, defaultPhrase, values);

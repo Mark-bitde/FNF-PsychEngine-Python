@@ -44,8 +44,8 @@ import flixel.input.keyboard.FlxKey;
 import flixel.input.gamepad.FlxGamepadInputID;
 
 import haxe.Json;
-import paopao.hython.Interp;
-import paopao.hython.Parser;
+import markbitde.hython.Interp;
+import markbitde.hython.Parser;
 import sys.io.File;
 import sys.FileSystem;
 import states.PlayState;
@@ -1642,7 +1642,7 @@ class FunkinPython {
 			var pyCode = sys.io.File.getContent(scriptName);
 			pyCode = StringTools.replace(pyCode, "\t", "    ");
 			pyCode = StringTools.replace(pyCode, "\r\n", "\n");
-			var program = new paopao.hython.Parser().parseString(pyCode);
+			var program = new Parser().parseString(pyCode);
 			if (program != null)
 			{
 				this.interp.execute(program);
@@ -1824,7 +1824,7 @@ class FunkinPython {
 	public static function getBool(variable:String) {
 		if(lastCalledScript == null) return false;
 
-		var py:paopao.hython.Interp = lastCalledScript.interp;
+		var py:Interp = lastCalledScript.interp;
 		if(py == null) return false;
 
 		var result:String = null;

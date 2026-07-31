@@ -334,7 +334,7 @@ class Achievements {
 	}
 	#end
 	#if PYTHON_ALLOWED
-	public static function addPyCallbacks(py:paopao.hython.Interp)
+	public static function addPyCallbacks(py:markbitde.hython.Interp)
 	{
 		py.setVar("getAchievementScore", function(name:String):Float
 		{
