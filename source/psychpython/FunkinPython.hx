@@ -115,6 +115,7 @@ class FunkinPython {
 		set('File', File);
 		set('FileSystem', FileSystem);
 		#end
+		set('game', game);
 		set('FlxG', flixel.FlxG);
 		set('FlxMath', flixel.math.FlxMath);
 		set('FlxSprite', flixel.FlxSprite);
