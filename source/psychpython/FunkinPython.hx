@@ -110,6 +110,34 @@ class FunkinPython {
 		
 		// Python shit 
 		// FLIXEL LIBS REALLY WORKS!!!
+		// Регистрируем функцию импорта в контексте Python
+		/* set("Import", function(libname:String, ?alias:String) {
+			trace(libname);
+			// 1. Пытаемся найти Haxe/Flixel класс по его строковому пути
+			var foundClass = Type.resolveClass(libname);
+			
+			if (foundClass != null) {
+				// Определяем имя, под которым класс запишется в Python
+				var targetName = (alias != null) ? alias : libname.split('.').pop();
+				
+				// 2. Пробрасываем найденный класс в Python-контекст под этим именем
+				set(targetName, foundClass);
+				
+				if (getBool("pythonDebugMode")) {
+					game.addTextToDebug('Haxe Class "$libname" successfully imported as "$targetName"', FlxColor.GREEN);
+				}
+			} else {
+				// Если класс не найден, проверяем, не Enum ли это
+				var foundEnum = Type.resolveEnum(libname);
+				if (foundEnum != null) {
+					var targetName = (alias != null) ? alias : libname.split('.').pop();
+					set(targetName, foundEnum);
+				} else {
+					game.addTextToDebug('Error: Could not import Haxe type "$libname". Make sure it is not culled by DCE.', FlxColor.RED);
+				}
+			}
+		}); */
+
 		set('Type', Type);
 		#if sys
 		set('File', File);
